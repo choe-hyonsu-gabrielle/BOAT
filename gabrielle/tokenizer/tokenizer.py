@@ -1,3 +1,4 @@
+import glob
 import json
 from collections import defaultdict
 from tqdm import tqdm
@@ -6,19 +7,20 @@ SPECIAL_TOKENS_PRESET = {"[PAD]": 0, "[UNK]": 1, "[CLS]": 2, "[SEP]": 3, "[MASK]
 
 
 class Tokenizer:
-    def __init__(self, vocab_limit=30000, filters='', cased=True, max_length=None, name=None, oov_token="[UNK]",
-                 whitespace_token="[S]", special_tokens_preset=SPECIAL_TOKENS_PRESET):
+    def __init__(self, vocab_limit=30000, filters='', cased=True, max_length=None, shave_long_tail=True, name=None,
+                 oov_token="[UNK]", whitespace_token="[S]", special_tokens_preset=SPECIAL_TOKENS_PRESET):
         assert special_tokens_preset is None or isinstance(special_tokens_preset, dict)
         self.name = name if name else self.__class__.__name__
         self.model = self.__class__.__name__
         self.vocab_size = None
         self.filters = filters
         self.cased = cased
+        self.shave_long_tail = shave_long_tail
         self.documents = 0
         self.special_tokens = tuple(special_tokens_preset)
         assert oov_token in self.special_tokens or oov_token is None
-        self.oov_token = oov_token
         assert whitespace_token in self.special_tokens or whitespace_token is None
+        self.oov_token = oov_token
         self.whitespace_token = whitespace_token
         self.token_index = dict(special_tokens_preset)
         self.index_token = {v: k for k, v in self.token_index.items()}
@@ -51,6 +53,7 @@ class Tokenizer:
                           documents=self.documents,
                           filters=self.filters,
                           cased=self.cased,
+                          shave_long_tail=self.shave_long_tail,
                           special_tokens=self.special_tokens,
                           oov_token=self.oov_token,
                           whitespace_token=self.whitespace_token,
@@ -70,6 +73,7 @@ class Tokenizer:
         self.documents = _t.get('documents', None)
         self.filters = _t.get('filters', None)
         self.cased = _t.get('cased', None)
+        self.shave_long_tail = _t.get('shave_long_tail', None)
         self.special_tokens = _t.get('special_tokens', None)
         self.oov_token = _t.get('oov_token', None)
         self.whitespace_token = _t.get('whitespace_token', None)
@@ -99,6 +103,8 @@ class CharLevelTokenizer(Tokenizer):
                         vocabs[token] += 1
                     self.documents += 1
         vocabs = sorted(vocabs.items(), key=lambda x: x[1], reverse=True)[:self.vocab_limit - len(self.special_tokens)]
+        if self.shave_long_tail:
+            vocabs = [v for v in vocabs if v[1] > 1]
         self.vocab_count = {k: v for k, v in vocabs}
         for index, (token, _) in enumerate(sorted(vocabs, key=lambda x: x[0]), start=len(self.special_tokens)):
             self.token_index[token] = index
@@ -137,9 +143,11 @@ class CharLevelTokenizer(Tokenizer):
 
 
 if __name__ == '__main__':
-    t = CharLevelTokenizer()
-    t.train_from_files(["train-samples.txt"])
-    t.save_tokenizer('your_awesome_tokenizer.json')
+    files = glob.glob('E:/Corpora & Language Resources/모두의 말뭉치/splits/*.txt')
+
+    tokenizer = CharLevelTokenizer()
+    tokenizer.train_from_files(files)
+    tokenizer.save_tokenizer('your_awesome_tokenizer.json')
 
     tokenizer = CharLevelTokenizer().load_pretrained_tokenizer('your_awesome_tokenizer.json')
 
