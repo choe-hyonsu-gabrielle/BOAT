@@ -22,6 +22,7 @@ class Tokenizer:
         assert whitespace_token in self.special_tokens or whitespace_token is None
         self.oov_token = oov_token
         self.whitespace_token = whitespace_token
+        self.special_token_strips = [t for t in self.special_tokens if t not in (self.oov_token, self.whitespace_token)]
         self.token_index = dict(special_tokens_preset)
         self.index_token = {v: k for k, v in self.token_index.items()}
         self.vocab_count = None
@@ -57,6 +58,7 @@ class Tokenizer:
                           special_tokens=self.special_tokens,
                           oov_token=self.oov_token,
                           whitespace_token=self.whitespace_token,
+                          special_token_strips=self.special_token_strips,
                           vocab_limit=self.vocab_limit,
                           max_length=self.max_length,
                           vocabulary=self.token_index,
@@ -77,6 +79,7 @@ class Tokenizer:
         self.special_tokens = _t.get('special_tokens', None)
         self.oov_token = _t.get('oov_token', None)
         self.whitespace_token = _t.get('whitespace_token', None)
+        self.special_token_strips = [t for t in self.special_tokens if t not in (self.oov_token, self.whitespace_token)]
         self.vocab_limit = _t.get('vocab_limit', None)
         self.max_length = _t.get('max_length', None)
         self.token_index = _t.get('vocabulary', None)
@@ -167,8 +170,7 @@ class CharLevelTokenizer(Tokenizer):
     def _decode_text(self, indices, strip_special_tokens=False):
         ids_to_tokens = [self.index_token.get(index, self.oov_token) for index in indices]
         if strip_special_tokens:
-            special_tokens = [spc for spc in self.special_tokens if spc not in (self.oov_token, self.whitespace_token)]
-            ids_to_tokens = [item for item in ids_to_tokens if item not in special_tokens]
+            ids_to_tokens = [item for item in ids_to_tokens if item not in self.special_token_strips]
             ids_to_tokens = [item if item != self.whitespace_token else ' ' for item in ids_to_tokens]
         return ids_to_tokens
 
