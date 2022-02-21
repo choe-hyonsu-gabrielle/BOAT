@@ -7,13 +7,13 @@ SPECIAL_TOKENS_PRESET = {"[PAD]": 0, "[UNK]": 1, "[CLS]": 2, "[SEP]": 3, "[MASK]
 
 
 class Tokenizer:
-    def __init__(self, vocab_limit=30000, filters='', cased=True, max_length=None, shave_long_tail=True, name=None,
+    def __init__(self, vocab_limit=30000, filters='', cased=True, max_length=512, shave_long_tail=True, name=None,
                  oov_token="[UNK]", whitespace_token="[S]", special_tokens_preset=SPECIAL_TOKENS_PRESET):
         assert special_tokens_preset is None or isinstance(special_tokens_preset, dict)
         self.name = name if name else self.__class__.__name__
         self.model = self.__class__.__name__
         self.vocab_size = None
-        self.filters = filters
+        self.filters = filters  # filtering method is not implemented yet.
         self.cased = cased
         self.shave_long_tail = shave_long_tail
         self.documents = 0
@@ -176,14 +176,13 @@ class CharLevelTokenizer(Tokenizer):
 
 
 if __name__ == '__main__':
-    # files = glob.glob('E:/Corpora & Language Resources/모두의 말뭉치/splits/*.txt')
+    files = glob.glob('E:/Corpora & Language Resources/모두의 말뭉치/splits/*.txt')
 
-    # tokenizer = CharLevelTokenizer()
-    # tokenizer.train_from_files(files)
-    # tokenizer.save_tokenizer('your_awesome_tokenizer.json')
+    tokenizer = CharLevelTokenizer()
+    tokenizer.train_from_files(files)
+    tokenizer.save_tokenizer('your_awesome_tokenizer.json')
 
     tokenizer = CharLevelTokenizer().load_pretrained_tokenizer('your_awesome_tokenizer.json')
-    tokenizer.max_length = 200
 
     with open('samples.txt', encoding='utf-8') as samples:
         texts = samples.read().splitlines()
