@@ -112,52 +112,87 @@ class CharLevelTokenizer(Tokenizer):
         assert len(self.token_index) == len(self.index_token)
         self.vocab_size = len(self.token_index)
 
-    def encode(self, inputs):
+    def encode(self, inputs, add_special_tokens=True):
         if isinstance(inputs, str):
-            return self._encode_text(inputs)
-        if isinstance(inputs, list):
-            outputs = [self._encode_text(x) for x in inputs]
-            return outputs
+            truncation_idx = self.max_length - 2 if add_special_tokens and self.max_length else self.max_length
+            inputs = inputs[:truncation_idx] if self.max_length else inputs
+            return self._encode_text(inputs, add_special_tokens=add_special_tokens)
+        elif isinstance(inputs, list) and isinstance(inputs[0], str):
+            if self.max_length:
+                truncation_idx = self.max_length - 2 if add_special_tokens else self.max_length
+                inputs = [text[:truncation_idx] for text in inputs]
+            batch_output = [self._encode_text(x, add_special_tokens=add_special_tokens) for x in inputs]
+            return batch_output
 
-    def _encode_text(self, text):
+    def encode_for_transformer(self, inputs, add_special_tokens=True, return_random_mask=False):
+        instance = dict()
+        input_ids = None            # token to index ids
+        token_type_ids = None       # segment ids inverts after '[SEP]'
+        attention_mask = None       # zeros on '[PAD]'
+        random_mask = None          # randomly generated '[MASK]' offset for masked language model
+        if isinstance(inputs, str):
+            input_ids = [self._encode_text(inputs, add_special_tokens=add_special_tokens)]
+        elif isinstance(inputs, list) and isinstance(inputs[0], str):
+            input_ids = [self._encode_text(x, add_special_tokens=add_special_tokens) for x in inputs]
+        token_ids = self._pad_to_max_length(input_ids)
+        # 퇴근~
+
+    def _pad_to_max_length(self, inputs):
+        padded = []
+        for item in inputs:
+            pads = [self.token_index.get('[PAD]')] * (self.max_length - len(item))
+            padded.append(item + pads)
+        return padded
+
+    def _encode_text(self, text, add_special_tokens=True):
         tokens = None
         text = text if self.cased else text.lower()
         if self.whitespace_token is not None and isinstance(self.whitespace_token, str):
             tokens = [char if char != ' ' else self.whitespace_token for char in list(text)]
         elif self.whitespace_token is None:
             tokens = [char for char in list(text) if char != ' ']
+        if add_special_tokens:
+            tokens = ['[CLS]'] + tokens + ['[SEP]']
         tokens_to_ids = [self.token_index.get(token, self.token_index[self.oov_token]) for token in tokens]
         return tokens_to_ids
 
-    def decode(self, inputs):
+    def decode(self, inputs, strip_special_tokens=False):
         assert isinstance(inputs, list)
         if isinstance(inputs[0], int):
-            return self._decode_text(inputs)
-        if isinstance(inputs, list):
-            outputs = [self._decode_text(x) for x in inputs]
-            return outputs
+            return self._decode_text(inputs, strip_special_tokens=strip_special_tokens)
+        elif isinstance(inputs[0], list) and isinstance(inputs[0][0], int):
+            batch_output = [self._decode_text(x, strip_special_tokens=strip_special_tokens) for x in inputs]
+            return batch_output
 
-    def _decode_text(self, indices):
+    def _decode_text(self, indices, strip_special_tokens=False):
         ids_to_tokens = [self.index_token.get(index, self.oov_token) for index in indices]
+        if strip_special_tokens:
+            special_tokens = [spc for spc in self.special_tokens if spc not in (self.oov_token, self.whitespace_token)]
+            ids_to_tokens = [item for item in ids_to_tokens if item not in special_tokens]
+            ids_to_tokens = [item if item != self.whitespace_token else ' ' for item in ids_to_tokens]
         return ids_to_tokens
 
 
 if __name__ == '__main__':
-    files = glob.glob('E:/Corpora & Language Resources/모두의 말뭉치/splits/*.txt')
+    # files = glob.glob('E:/Corpora & Language Resources/모두의 말뭉치/splits/*.txt')
 
-    tokenizer = CharLevelTokenizer()
-    tokenizer.train_from_files(files)
-    tokenizer.save_tokenizer('your_awesome_tokenizer.json')
+    # tokenizer = CharLevelTokenizer()
+    # tokenizer.train_from_files(files)
+    # tokenizer.save_tokenizer('your_awesome_tokenizer.json')
 
     tokenizer = CharLevelTokenizer().load_pretrained_tokenizer('your_awesome_tokenizer.json')
+    tokenizer.max_length = 200
 
-    with open('inference-samples.txt', encoding='utf-8') as samples:
+    with open('samples.txt', encoding='utf-8') as samples:
         texts = samples.read().splitlines()
 
-    encoded = tokenizer.encode(texts)
-    decoded = tokenizer.decode(encoded)
+    encoded = tokenizer.encode(texts, add_special_tokens=True)
+    print(encoded)
+    decoded = tokenizer.decode(encoded, strip_special_tokens=False)
+    print(decoded)
     for _i, (x, e, d) in enumerate(zip(texts, encoded, decoded)):
         print(f'({_i})', x)
         print(len(e), e)
-        print(len(d), ''.join(d))
+        print(len(d), d)
+        print(''.join(d))
         print()
