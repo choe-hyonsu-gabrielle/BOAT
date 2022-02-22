@@ -128,18 +128,18 @@ class CharLevelTokenizer(Tokenizer):
             return batch_output
 
     def encode_for_transformer(self, inputs, add_special_tokens=True, return_random_mask=False):
-        instance = dict()
         input_ids = None            # token to index ids
-        token_type_ids = None       # segment ids inverts after '[SEP]'
-        attention_mask = None       # zeros on '[PAD]'
-        random_mask = None          # randomly generated '[MASK]' offset for masked language model
+        # token_type_ids            # segment ids inverts after '[SEP]'
+        # attention_mask            # zeros on '[PAD]'
+        # random_masked_input       # randomly generated '[MASK]' offset for masked language model
         if isinstance(inputs, str):
             input_ids = [self._encode_text(inputs, add_special_tokens=add_special_tokens)]
         elif isinstance(inputs, list) and isinstance(inputs[0], str):
             input_ids = [self._encode_text(x, add_special_tokens=add_special_tokens) for x in inputs]
-        input_ids, token_type_ids, attention_masks = self._get_special_inputs(input_ids)
+        input_ids, token_type_ids, attention_mask = self._get_special_inputs(input_ids)
         if return_random_mask:
             random_masked_input = self._get_random_mask(rate=0.15, whole_word_mask=True)
+        return dict(input_ids=input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask)
 
     def _get_special_inputs(self, inputs):
         pad = self.token_index.get('[PAD]')
@@ -148,9 +148,11 @@ class CharLevelTokenizer(Tokenizer):
         token_type_ids = []
         attention_masks = []
         for item in inputs:
+            # for pad_to_max_length
             pad_size = (self.max_length - len(item)) if self.max_length else 0
             pads = [pad] * pad_size
-            padded_input_ids.append(item + pads)
+            padded_ids = item + pads
+            # for type_token_ids
             segment = 0
             segment_ids = []
             for idx in item:
@@ -159,11 +161,17 @@ class CharLevelTokenizer(Tokenizer):
                     segment = 0 if segment == 1 else 1
                 elif idx == pad:
                     break
-            segment_ids += [segment] * (self.max_length - len(segment_ids)) if self.max_length else 0
+            if self.max_length:
+                segment_ids = segment_ids + [segment] * pad_size
+            # for attention_mask
+            mask_ids = [1] * len(item) + [0] * pad_size
+            if self.max_length:
+                padded_ids = padded_ids[:self.max_length]
+                segment_ids = segment_ids[:self.max_length]
+                mask_ids = mask_ids[:self.max_length]
+            padded_input_ids.append(padded_ids)
             token_type_ids.append(segment_ids)
-            ones = [1] * len(item)
-            zeros = [0] * pad_size
-            attention_masks.append(ones + zeros)
+            attention_masks.append(mask_ids)
         return padded_input_ids, token_type_ids, attention_masks
 
     def _get_random_mask(self, rate, whole_word_mask):
@@ -198,24 +206,27 @@ class CharLevelTokenizer(Tokenizer):
 
 
 if __name__ == '__main__':
-    files = glob.glob('E:/Corpora & Language Resources/모두의 말뭉치/splits/*.txt')
+    # files = glob.glob('E:/Corpora & Language Resources/모두의 말뭉치/splits/*.txt')
 
-    tokenizer = CharLevelTokenizer()
-    tokenizer.train_from_files(files)
-    tokenizer.save_tokenizer('your_awesome_tokenizer.json')
+    # tokenizer = CharLevelTokenizer()
+    # tokenizer.train_from_files(files)
+    # tokenizer.save_tokenizer('your_awesome_tokenizer.json')
 
     tokenizer = CharLevelTokenizer().load_pretrained_tokenizer('your_awesome_tokenizer.json')
+    tokenizer.max_length = 50
 
     with open('samples.txt', encoding='utf-8') as samples:
         texts = samples.read().splitlines()
 
     encoded = tokenizer.encode(texts, add_special_tokens=True)
-    print(encoded)
+    encoded_tf = tokenizer.encode_for_transformer(texts, add_special_tokens=True)
     decoded = tokenizer.decode(encoded, strip_special_tokens=False)
-    print(decoded)
     for _i, (x, e, d) in enumerate(zip(texts, encoded, decoded)):
         print(f'({_i})', x)
         print(len(e), e)
         print(len(d), d)
         print(''.join(d))
+        print('input_ids:', len(encoded_tf['input_ids'][_i]), encoded_tf['input_ids'][_i])
+        print('token_type_ids:', len(encoded_tf['token_type_ids'][_i]), encoded_tf['token_type_ids'][_i])
+        print('attention_mask:', len(encoded_tf['attention_mask'][_i]),encoded_tf['attention_mask'][_i])
         print()
