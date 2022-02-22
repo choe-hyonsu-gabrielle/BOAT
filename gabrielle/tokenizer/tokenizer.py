@@ -137,15 +137,37 @@ class CharLevelTokenizer(Tokenizer):
             input_ids = [self._encode_text(inputs, add_special_tokens=add_special_tokens)]
         elif isinstance(inputs, list) and isinstance(inputs[0], str):
             input_ids = [self._encode_text(x, add_special_tokens=add_special_tokens) for x in inputs]
-        token_ids = self._pad_to_max_length(input_ids)
-        # 퇴근~
+        input_ids, token_type_ids, attention_masks = self._get_special_inputs(input_ids)
+        if return_random_mask:
+            random_masked_input = self._get_random_mask(rate=0.15, whole_word_mask=True)
 
-    def _pad_to_max_length(self, inputs):
-        padded = []
+    def _get_special_inputs(self, inputs):
+        pad = self.token_index.get('[PAD]')
+        sep = self.token_index.get('[SEP]')
+        padded_input_ids = []
+        token_type_ids = []
+        attention_masks = []
         for item in inputs:
-            pads = [self.token_index.get('[PAD]')] * (self.max_length - len(item))
-            padded.append(item + pads)
-        return padded
+            pad_size = (self.max_length - len(item)) if self.max_length else 0
+            pads = [pad] * pad_size
+            padded_input_ids.append(item + pads)
+            segment = 0
+            segment_ids = []
+            for idx in item:
+                segment_ids.append(segment)
+                if idx == sep:
+                    segment = 0 if segment == 1 else 1
+                elif idx == pad:
+                    break
+            segment_ids += [segment] * (self.max_length - len(segment_ids)) if self.max_length else 0
+            token_type_ids.append(segment_ids)
+            ones = [1] * len(item)
+            zeros = [0] * pad_size
+            attention_masks.append(ones + zeros)
+        return padded_input_ids, token_type_ids, attention_masks
+
+    def _get_random_mask(self, rate, whole_word_mask):
+        return []
 
     def _encode_text(self, text, add_special_tokens=True):
         tokens = None
