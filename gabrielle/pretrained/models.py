@@ -91,9 +91,9 @@ class TransformerStackedEncoderLayers(layers.Layer):
                                                    feedforward_dim=self.feedforward_dim,
                                                    dropout_rate=self.dropout_rate,
                                                    block_id=0)
-            self.layers = [common_layer] * self.stack_height
+            self.layers = [common_layer] * self.num_layers
         else:
-            for i in range(self.stack_height):
+            for i in range(self.num_layers):
                 self.layers.append(
                     TransformerEncoderBlock(embedding_dim=self.embedding_dim,
                                             num_heads=self.num_heads,
@@ -142,7 +142,7 @@ if __name__ == '__main__':
                                                           embedding_dim=cfg.EMBEDDING_DIM,
                                                           factorized_dim=cfg.FACTORIZED_DIM)
     embedding = embedding_layer(inputs)
-    """
+
     transformer_encoder_layer = TransformerStackedEncoderLayers(num_layers=cfg.NUM_LAYERS,
                                                                 cross_layer_sharing=cfg.CROSS_LAYER_SHARING,
                                                                 embedding_dim=cfg.EMBEDDING_DIM,
@@ -160,8 +160,8 @@ if __name__ == '__main__':
     for layer in transformer_encoder_layers:
         z = layer(z)
     sequence_output = z
-
-    # sequence_output = transformer_encoder_layer(embedding)
+    """
+    sequence_output = transformer_encoder_layer(embedding)
     post_encoder_layer = TransformerPostEncoderDenseLayer(embedding_dim=cfg.EMBEDDING_DIM,
                                                           vocab_size=tokenizer.vocab_size)
     outputs = post_encoder_layer(sequence_output)
