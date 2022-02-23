@@ -9,11 +9,11 @@ from gabrielle.tokenizer import CharLevelTokenizer
 class MLMConfig:
     MAX_LENGTH = 512
     EMBEDDING_DIM = 768
-    FACTORIZED_DIM = 64
+    FACTORIZED_DIM = 128
     CROSS_LAYER_SHARING = False
-    NUM_HEADS = 8
-    FEEDFORWARD_DIM = 768
-    NUM_LAYERS = 8
+    NUM_HEADS = 4
+    FEEDFORWARD_DIM = EMBEDDING_DIM
+    NUM_LAYERS = 4
     DROPOUT_RATE = 0.1
     BATCH_SIZE = 256
     LEARNING_RATE = 0.0001
