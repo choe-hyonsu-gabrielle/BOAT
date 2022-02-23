@@ -1,5 +1,6 @@
 import glob
 import json
+import random
 from collections import defaultdict
 from tqdm import tqdm
 
@@ -127,26 +128,38 @@ class CharLevelTokenizer(Tokenizer):
             batch_output = [self._encode_text(x, add_special_tokens=add_special_tokens) for x in inputs]
             return batch_output
 
-    def encode_for_transformer(self, inputs, add_special_tokens=True, return_random_mask=False):
+    def encode_for_transformer(self, inputs, add_special_tokens=True, random_mask=False):
         input_ids = None            # token to index ids
         # token_type_ids            # segment ids inverts after '[SEP]'
         # attention_mask            # zeros on '[PAD]'
-        # random_masked_input       # randomly generated '[MASK]' offset for masked language model
+        # random_masked_input       # input_ids randomly replaced with '[MASK]' offset for masked language model
         if isinstance(inputs, str):
             input_ids = [self._encode_text(inputs, add_special_tokens=add_special_tokens)]
         elif isinstance(inputs, list) and isinstance(inputs[0], str):
             input_ids = [self._encode_text(x, add_special_tokens=add_special_tokens) for x in inputs]
-        input_ids, token_type_ids, attention_mask = self._get_special_inputs(input_ids)
-        if return_random_mask:
-            random_masked_input = self._get_random_mask(rate=0.15, whole_word_mask=True)
-        return dict(input_ids=input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask)
+        special_inputs = self._get_special_inputs(input_ids, random_mask=random_mask)
+        if random_mask:
+            input_ids, token_type_ids, attention_mask, original_input_ids = special_inputs
+            return dict(input_ids=input_ids,
+                        token_type_ids=token_type_ids,
+                        attention_mask=attention_mask,
+                        original_input_ids=original_input_ids)
+        else:
+            input_ids, token_type_ids, attention_mask = special_inputs
+            return dict(input_ids=input_ids,
+                        token_type_ids=token_type_ids,
+                        attention_mask=attention_mask)
 
-    def _get_special_inputs(self, inputs):
+    def _get_special_inputs(self, inputs, random_mask=False, random_mask_rate=0.15):
+        cls = self.token_index.get('[CLS]')
         pad = self.token_index.get('[PAD]')
         sep = self.token_index.get('[SEP]')
+        mask = self.token_index.get('[MASK]') if random_mask else None
+        random_id_pool = range(self.vocab_size) if random_mask else None
         padded_input_ids = []
         token_type_ids = []
         attention_masks = []
+        random_masked_input_ids = []
         for item in inputs:
             # for pad_to_max_length
             pad_size = (self.max_length - len(item)) if self.max_length else 0
@@ -165,17 +178,35 @@ class CharLevelTokenizer(Tokenizer):
                 segment_ids = segment_ids + [segment] * pad_size
             # for attention_mask
             mask_ids = [1] * len(item) + [0] * pad_size
+            # for random_masked_input_ids
+            mask_idx_targets = random.sample(population=range(len(item)), k=int(len(item) * random_mask_rate))
+            split_idx = int(len(mask_idx_targets) * 0.8)
+            for_mask = mask_idx_targets[:split_idx]
+            for_replace = mask_idx_targets[split_idx::2]
+            random_masked_ids = None
+            if random_mask:
+                for target in for_mask:
+                    if item[target] not in (cls, sep):
+                        item[target] = mask
+                for target in for_replace:
+                    if item[target] not in (cls, sep):
+                        item[target] = random.choice(random_id_pool)
+                random_masked_ids = item + pads
+            # append results
             if self.max_length:
                 padded_ids = padded_ids[:self.max_length]
                 segment_ids = segment_ids[:self.max_length]
                 mask_ids = mask_ids[:self.max_length]
+                if random_mask:
+                    random_masked_ids = random_masked_ids[:self.max_length]
             padded_input_ids.append(padded_ids)
             token_type_ids.append(segment_ids)
             attention_masks.append(mask_ids)
-        return padded_input_ids, token_type_ids, attention_masks
-
-    def _get_random_mask(self, rate, whole_word_mask):
-        return []
+            random_masked_input_ids.append(random_masked_ids)
+        if random_mask:
+            return random_masked_input_ids, token_type_ids, attention_masks, padded_input_ids
+        else:
+            return padded_input_ids, token_type_ids, attention_masks
 
     def _encode_text(self, text, add_special_tokens=True):
         tokens = None
@@ -219,7 +250,7 @@ if __name__ == '__main__':
         texts = samples.read().splitlines()
 
     encoded = tokenizer.encode(texts, add_special_tokens=True)
-    encoded_tf = tokenizer.encode_for_transformer(texts, add_special_tokens=True)
+    encoded_tf = tokenizer.encode_for_transformer(texts, add_special_tokens=True, random_mask=True)
     decoded = tokenizer.decode(encoded, strip_special_tokens=False)
     for _i, (x, e, d) in enumerate(zip(texts, encoded, decoded)):
         print(f'({_i})', x)
@@ -228,5 +259,7 @@ if __name__ == '__main__':
         print(''.join(d))
         print('input_ids:', len(encoded_tf['input_ids'][_i]), encoded_tf['input_ids'][_i])
         print('token_type_ids:', len(encoded_tf['token_type_ids'][_i]), encoded_tf['token_type_ids'][_i])
-        print('attention_mask:', len(encoded_tf['attention_mask'][_i]),encoded_tf['attention_mask'][_i])
+        print('attention_mask:', len(encoded_tf['attention_mask'][_i]), encoded_tf['attention_mask'][_i])
+        print(tokenizer.decode(encoded_tf['input_ids'][_i]))
         print()
+
