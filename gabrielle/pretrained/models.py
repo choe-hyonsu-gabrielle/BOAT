@@ -10,7 +10,7 @@ class MLMConfig:
     MAX_LENGTH = 512
     EMBEDDING_DIM = 768
     FACTORIZED_DIM = 128
-    CROSS_LAYER_SHARING = False
+    CROSS_LAYER_SHARING = True
     NUM_HEADS = 4
     FEEDFORWARD_DIM = EMBEDDING_DIM
     NUM_LAYERS = 4
@@ -129,12 +129,14 @@ if __name__ == '__main__':
     cfg = MLMConfig()
 
     tokenizer = CharLevelTokenizer().load_pretrained_tokenizer('../tokenizer/your_awesome_tokenizer.json')
-
+    """
     with open('../tokenizer/samples.txt', encoding='utf-8') as samples:
         texts = samples.read().splitlines()[:5]
-
+    
     encoded_tf = tokenizer.encode_for_transformer(texts, add_special_tokens=True, random_mask=True)
-    # inputs = tf.convert_to_tensor([encoded_tf['input_ids'], encoded_tf['token_type_ids'], encoded_tf['attention_mask']])
+    
+    inputs = tf.convert_to_tensor([encoded_tf['input_ids'], encoded_tf['token_type_ids'], encoded_tf['attention_mask']])
+    """
 
     inputs = layers.Input(shape=(3, cfg.MAX_LENGTH,), dtype=tf.int64)
     embedding_layer = FactorizedTokSegPositEmbeddingLayer(max_length=cfg.MAX_LENGTH,
@@ -142,25 +144,12 @@ if __name__ == '__main__':
                                                           embedding_dim=cfg.EMBEDDING_DIM,
                                                           factorized_dim=cfg.FACTORIZED_DIM)
     embedding = embedding_layer(inputs)
-
     transformer_encoder_layer = TransformerStackedEncoderLayers(num_layers=cfg.NUM_LAYERS,
                                                                 cross_layer_sharing=cfg.CROSS_LAYER_SHARING,
                                                                 embedding_dim=cfg.EMBEDDING_DIM,
                                                                 num_heads=cfg.NUM_HEADS,
                                                                 feedforward_dim=cfg.FEEDFORWARD_DIM,
                                                                 dropout_rate=cfg.DROPOUT_RATE)
-    """
-
-    transformer_encoder_layers = [TransformerEncoderBlock(embedding_dim=cfg.EMBEDDING_DIM,
-                                                          num_heads=cfg.NUM_HEADS,
-                                                          feedforward_dim=cfg.FEEDFORWARD_DIM,
-                                                          dropout_rate=cfg.DROPOUT_RATE,
-                                                          block_id=i+1) for i in range(cfg.NUM_LAYERS)]
-    z = embedding
-    for layer in transformer_encoder_layers:
-        z = layer(z)
-    sequence_output = z
-    """
     sequence_output = transformer_encoder_layer(embedding)
     post_encoder_layer = TransformerPostEncoderDenseLayer(embedding_dim=cfg.EMBEDDING_DIM,
                                                           vocab_size=tokenizer.vocab_size)
@@ -172,4 +161,4 @@ if __name__ == '__main__':
     loss = keras.losses.SparseCategoricalCrossentropy()
     model.compile(optimizer=optimizer, loss=loss, metrics=["accuracy"])
 
-    model.summary(line_length=200)
+    model.summary(line_length=250)
