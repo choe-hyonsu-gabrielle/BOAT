@@ -3,6 +3,7 @@ import dataclasses
 
 @dataclasses.dataclass
 class BOATConfig:
+    DYNAMIC_STRIP = True
     MAX_LENGTH = 512
     VOCAB_SIZE = 30000
     EMBEDDING_DIM = 128
