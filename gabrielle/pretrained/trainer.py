@@ -49,7 +49,12 @@ def get_model(config, name=None, plot=False):
 
     if plot:
         keras.utils.plot_model(model, 'your_awesome_model.png', show_shapes=True)
+
     model.summary(line_length=200)
+
+    for k, v in config.__dict__.items():
+        if not k.startswith('__'):
+            print(k, ':', v)
 
     return model
 
@@ -84,24 +89,24 @@ def train(model, train_data, validation_data, config):
 
 
 if __name__ == '__main__':
-    # tokenizer
+    # load pretrained tokenizer: dynamic masking with random_seed=None
     tokenizer = CharLevelTokenizer().load_pretrained_tokenizer('../tokenizer/your_awesome_tokenizer.json')
 
-    # config
+    # load config
     cfg = BOATConfig
     cfg.VOCAB_SIZE = tokenizer.vocab_size
     cfg.MAX_LENGTH = tokenizer.max_length
 
-    # dataset
-    train_generator = TextDataStreamer(corpus='E:/Corpora & Language Resources/모두의 말뭉치/splits/modu-plm-test.txt',
+    # dataset from generator: train
+    train_generator = TextDataStreamer(corpus='E:/Corpora & Language Resources/모두의 말뭉치/splits/modu-plm-train.txt',
                                        tokenizer=tokenizer)
     train_set = tf.data.Dataset.from_generator(train_generator,
                                                output_signature=(
                                                    tf.TensorSpec(shape=[2, cfg.MAX_LENGTH], dtype=tf.int32),
                                                    tf.TensorSpec(shape=[cfg.MAX_LENGTH], dtype=tf.int32)
                                                )).batch(cfg.BATCH_SIZE)
-
-    valid_generator = TextDataStreamer(corpus='../tokenizer/samples.txt',
+    # dataset from generator: valid
+    valid_generator = TextDataStreamer(corpus='E:/Corpora & Language Resources/모두의 말뭉치/splits/modu-plm-dev.txt',
                                        tokenizer=tokenizer)
     valid_set = tf.data.Dataset.from_generator(valid_generator,
                                                output_signature=(
@@ -109,8 +114,8 @@ if __name__ == '__main__':
                                                    tf.TensorSpec(shape=[cfg.MAX_LENGTH], dtype=tf.int32)
                                                )).batch(cfg.BATCH_SIZE)
 
-    # model
+    # define model
     boat = get_model(config=cfg, name="BOAT", plot=True)
 
-    # trainer
+    # run trainer
     train(model=boat, train_data=train_set, validation_data=valid_set, config=cfg)

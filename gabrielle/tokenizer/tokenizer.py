@@ -101,9 +101,10 @@ class Tokenizer:
 
 
 class CharLevelTokenizer(Tokenizer):
-    def __init__(self, set_random_seed=940803, **kwargs):
+    def __init__(self, random_seed=None, **kwargs):
         super(CharLevelTokenizer, self).__init__(**kwargs)
-        random.seed(set_random_seed)
+        if random_seed:
+            random.seed(random_seed)
 
     def train_from_files(self, files, encoding='utf-8'):
         vocabs = defaultdict(int)
