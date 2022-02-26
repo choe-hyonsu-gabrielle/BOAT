@@ -63,7 +63,7 @@ def train(model, train_data, validation_data, config):
 
     callbacks = [
         keras.callbacks.EarlyStopping(monitor='val_acc', mode='max', verbose=1, patience=2),
-        keras.callbacks.ModelCheckpoint(config.SAVEDMODEL_PATH, monitor='val_loss', mode='min', verbose=1, save_best_only=True),
+        keras.callbacks.ModelCheckpoint(config.SAVED_MODEL_PATH, monitor='val_loss', mode='min', verbose=1, save_best_only=True),
         keras.callbacks.TerminateOnNaN()
     ]
 

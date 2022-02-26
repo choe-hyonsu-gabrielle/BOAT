@@ -16,4 +16,4 @@ class BOATConfig:
     BATCH_SIZE = 16
     LEARNING_RATE = 0.0001
     EPOCHS = 1000
-    SAVEDMODEL_PATH = 'savedmodel'
+    SAVED_MODEL_PATH = 'saved_model'
