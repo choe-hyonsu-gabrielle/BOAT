@@ -194,7 +194,6 @@ if __name__ == '__main__':
         texts = samples.read().splitlines()[:batch_size]
 
     encoded_tf = tokenizer.encode_for_transformer(texts, add_special_tokens=True, random_mask=True)
-    model_inputs = tf.convert_to_tensor([encoded_tf['masked_input_ids'], encoded_tf['token_type_ids']])
 
     # Test feedforward overview.
     # input shape is (2, batch_size, max_length): * If you want batch_size comes first, use batch_first=True on Embedder
@@ -202,6 +201,7 @@ if __name__ == '__main__':
     # output shape is (batch_size, max_length, vocab_size):
     #     ==> (batch_size, max_length, vocab_size)
 
+    model_inputs = tf.convert_to_tensor([encoded_tf['masked_input_ids'], encoded_tf['token_type_ids']])
     print(model_inputs, ': model_inputs')
 
     embedding_layer = FactorizedEmbeddingLayer(max_length=cfg.MAX_LENGTH,
@@ -209,7 +209,6 @@ if __name__ == '__main__':
                                                embedding_dim=cfg.EMBEDDING_DIM,
                                                factorized_dim=cfg.FACTORIZED_DIM,
                                                batch_first=False)
-
     embedding = embedding_layer(model_inputs)
     transformer_encoder_layer = TransformerStackedEncoderLayers(num_layers=cfg.NUM_LAYERS,
                                                                 cross_layer_sharing=cfg.CROSS_LAYER_SHARING,
@@ -220,6 +219,6 @@ if __name__ == '__main__':
     sequence_output = transformer_encoder_layer(embedding)
     post_encoder_layer = TransformerPostEncoderDenseLayer(embedding_dim=cfg.EMBEDDING_DIM,
                                                           vocab_size=tokenizer.vocab_size)
-    model_outputs = post_encoder_layer(sequence_output)
 
+    model_outputs = post_encoder_layer(sequence_output)
     print(model_outputs, ': model_outputs')

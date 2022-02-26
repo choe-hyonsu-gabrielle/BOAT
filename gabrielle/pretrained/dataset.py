@@ -11,7 +11,6 @@ class TextDataStreamer:
         self.name = name if name else self.__class__.__name__
         self.file = open(self.corpus, encoding='utf-8')
         self.stream = self.file.__iter__()
-        self.opened = True
 
     def __call__(self, *args, **kwargs):
         try:
