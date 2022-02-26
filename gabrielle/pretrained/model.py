@@ -194,6 +194,7 @@ class TransformerPostEncoderDenseLayer(layers.Layer):
     def call(self, inputs, *args, **kwargs):
         # |input[0]| = batch_size * max_length * embedding_dim
         _outputs = self.classifier(inputs[0])
+        # no need to argmax on training masked language model.
         return _outputs
 
 
