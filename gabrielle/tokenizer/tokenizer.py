@@ -2,6 +2,7 @@ import glob
 import json
 import random
 from collections import defaultdict
+import numpy
 from tqdm import tqdm
 
 SPECIAL_TOKENS_PRESET = {"[PAD]": 0, "[UNK]": 1, "[CLS]": 2, "[SEP]": 3, "[MASK]": 4, "[S]": 5, "[BGN]": 6, "[END]": 7}
@@ -9,7 +10,7 @@ SPECIAL_TOKENS_PRESET = {"[PAD]": 0, "[UNK]": 1, "[CLS]": 2, "[SEP]": 3, "[MASK]
 
 class Tokenizer:
     def __init__(self, vocab_limit=30000, filters='', cased=True, max_length=512, shave_long_tail=True, name=None,
-                 oov_token="[UNK]", whitespace_token="[S]", special_tokens_preset=SPECIAL_TOKENS_PRESET):
+                 oov_token="[UNK]", whitespace_token="[S]", mask_token="[MASK]", special_tokens_preset=SPECIAL_TOKENS_PRESET):
         assert special_tokens_preset is None or isinstance(special_tokens_preset, dict)
         self.name = name if name else self.__class__.__name__
         self.model = self.__class__.__name__
@@ -23,7 +24,10 @@ class Tokenizer:
         assert whitespace_token in self.special_tokens or whitespace_token is None
         self.oov_token = oov_token
         self.whitespace_token = whitespace_token
-        self.special_token_strips = [t for t in self.special_tokens if t not in (self.oov_token, self.whitespace_token)]
+        self.mask_token = mask_token
+        self.special_token_strips = [t for t in self.special_tokens if t not in (self.oov_token,
+                                                                                 self.whitespace_token,
+                                                                                 self.mask_token)]
         self.token_index = dict(special_tokens_preset)
         self.index_token = {v: k for k, v in self.token_index.items()}
         self.vocab_count = None
@@ -59,6 +63,7 @@ class Tokenizer:
                           special_tokens=self.special_tokens,
                           oov_token=self.oov_token,
                           whitespace_token=self.whitespace_token,
+                          mask_token=self.mask_token,
                           special_token_strips=self.special_token_strips,
                           vocab_limit=self.vocab_limit,
                           max_length=self.max_length,
@@ -80,7 +85,10 @@ class Tokenizer:
         self.special_tokens = _t.get('special_tokens', None)
         self.oov_token = _t.get('oov_token', None)
         self.whitespace_token = _t.get('whitespace_token', None)
-        self.special_token_strips = [t for t in self.special_tokens if t not in (self.oov_token, self.whitespace_token)]
+        self.mask_token = _t.get('mask_token', None)
+        self.special_token_strips = [t for t in self.special_tokens if t not in (self.oov_token,
+                                                                                 self.whitespace_token,
+                                                                                 self.mask_token)]
         self.vocab_limit = _t.get('vocab_limit', None)
         self.max_length = _t.get('max_length', None)
         self.token_index = _t.get('vocabulary', None)
@@ -88,12 +96,14 @@ class Tokenizer:
         self.vocab_count = _t.get('vocab_count', None)
         assert self.oov_token in self.special_tokens or self.oov_token is None
         assert self.whitespace_token in self.special_tokens or self.whitespace_token is None
+        assert self.mask_token in self.special_tokens or self.mask_token is None
         return self
 
 
 class CharLevelTokenizer(Tokenizer):
-    def __init__(self, **kwargs):
+    def __init__(self, set_random_seed=940803, **kwargs):
         super(CharLevelTokenizer, self).__init__(**kwargs)
+        random.seed(set_random_seed)
 
     def train_from_files(self, files, encoding='utf-8'):
         vocabs = defaultdict(int)
@@ -147,7 +157,7 @@ class CharLevelTokenizer(Tokenizer):
         cls = self.token_index.get('[CLS]')
         pad = self.token_index.get('[PAD]')
         sep = self.token_index.get('[SEP]')
-        mask = self.token_index.get('[MASK]') if random_mask else None
+        mask = self.token_index.get(self.mask_token) if random_mask else None
         random_id_pool = range(self.vocab_size) if random_mask else None
         padded_input_ids = []
         token_type_ids = []
@@ -217,6 +227,8 @@ class CharLevelTokenizer(Tokenizer):
         return tokens_to_ids
 
     def decode(self, inputs, strip_special_tokens=False):
+        if isinstance(inputs, numpy.ndarray):
+            inputs = inputs.tolist()
         assert isinstance(inputs, list)
         if isinstance(inputs[0], int):
             return self._decode_text(inputs, strip_special_tokens=strip_special_tokens)
@@ -233,11 +245,11 @@ class CharLevelTokenizer(Tokenizer):
 
 
 if __name__ == '__main__':
-    # files = glob.glob('E:/Corpora & Language Resources/모두의 말뭉치/splits/*.txt')
+    files = glob.glob('E:/Corpora & Language Resources/모두의 말뭉치/splits/*.txt')
 
-    # tokenizer = CharLevelTokenizer()
-    # tokenizer.train_from_files(files)
-    # tokenizer.save_tokenizer('your_awesome_tokenizer.json')
+    tokenizer = CharLevelTokenizer()
+    tokenizer.train_from_files(files)
+    tokenizer.save_tokenizer('your_awesome_tokenizer.json')
 
     tokenizer = CharLevelTokenizer().load_pretrained_tokenizer('your_awesome_tokenizer.json')
     tokenizer.max_length = 50
