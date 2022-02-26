@@ -50,7 +50,7 @@ def get_model(config, name=None, plot=False):
     if plot:
         keras.utils.plot_model(model, 'your_awesome_model.png', show_shapes=True)
 
-    model.summary(line_length=200)
+    model.summary(line_length=150)
 
     for k, v in config.__dict__.items():
         if not k.startswith('__'):
