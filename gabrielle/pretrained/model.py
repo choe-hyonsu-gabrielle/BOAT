@@ -63,7 +63,7 @@ class MaskedLanguageModelEmbeddingLayer(layers.Layer):
 
     def call(self, inputs, *args, **kwargs):
         # inputs = (token_ids OR masked_input_ids, token_type_ids) : no need to feed attention_mask manually.
-        # |input[i]| = batch_size * max_length
+        # |inputs| = 2:(token_ids, token_type_ids) * batch_size * max_length
         if self.batch_first:
             token_ids = inputs[:, 0, :]
             token_type_ids = inputs[:, 1, :]
@@ -106,7 +106,7 @@ class TransformerEncoderBlock(layers.Layer):
 
     def call(self, inputs, *args, **kwargs):
         # |input[0]| = batch_size * max_length * embedding_dim
-        # inputs = (token_vectors+position_vectors+segment_vector, tf.convert_to_tensor(attention_mask))
+        # inputs = (token_vectors+position_vectors+segment_vector, attention_mask)
         query, value, key = inputs[0], inputs[0], inputs[0]
         attention_mask = inputs[1]
         attention_output = self.attention(query=query, value=value, key=key, attention_mask=attention_mask)
