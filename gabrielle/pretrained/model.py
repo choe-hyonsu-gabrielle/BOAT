@@ -161,7 +161,7 @@ class TransformerStackedEncoderLayers(layers.Layer):
 
 
 class TransformerPostEncoderDenseLayer(layers.Layer):
-    def __init__(self, embedding_dim, vocab_size):
+    def __init__(self, embedding_dim, vocab_size, return_argmax=False):
         """
         :param embedding_dim: embedding dim
         :param vocab_size: tokenizer.vocab_size for output_dim
@@ -173,11 +173,14 @@ class TransformerPostEncoderDenseLayer(layers.Layer):
             [layers.Dense(embedding_dim, activation='relu'),
              layers.Dense(vocab_size, activation='softmax')]
         )
+        self.return_argmax = return_argmax
 
     def call(self, inputs, *args, **kwargs):
         # |input[0]| = batch_size * max_length * embedding_dim
         _outputs = self.classifier(inputs[0])
         # no need to argmax on training masked language model.
+        if self.return_argmax:
+            return keras.backend.argmax(_outputs, axis=-1)
         return _outputs
 
 
