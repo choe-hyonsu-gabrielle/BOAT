@@ -8,4 +8,4 @@ Transformer-based BERT-like pretrained character level Masked Language Model on 
 - Factorized embedding parameterization (cf. *ALBERT*)
 - Dynamic masking (cf. *RoBERTa*)
 - Dynamic stripping on the inputs longer than max length
-- Lead-off recognition on `[CLS]` token instead of NSP or SOP Task
+- Lead-off Recognition on `[CLS]` token instead of NSP or SOP Task
