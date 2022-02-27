@@ -6,6 +6,6 @@ Transformer-based BERT-like pretrained character level Masked Language Model on 
 - Pretrained character-level tokenizer with explicit white-spacing tokens & long tail truncation
 - Cross-layer parameter sharing (cf. *ALBERT*)
 - Factorized embedding parameterization (cf. *ALBERT*)
-- Dynamic masking (cf. *RoBERTa*)
-- Dynamic stripping on the inputs longer than max length
-- Sentence Order Prediction (SOP) task (cf. *ALBERT*; To be applied.)
+- Dynamic masking (totally random. cf. *RoBERTa*)
+- Dynamic stripping on the inputs longer than `max_length`
+- Sentence Order Prediction (SOP) task (cf. *ALBERT*; to be applied.)
