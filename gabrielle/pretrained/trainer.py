@@ -98,7 +98,7 @@ if __name__ == '__main__':
     cfg.MAX_LENGTH = tokenizer.max_length
 
     # dataset from generator: train
-    train_generator = TextDataStreamer(corpus='E:/Corpora & Language Resources/모두의 말뭉치/splits/modu-plm-test.txt',
+    train_generator = TextDataStreamer(corpus='../tokenizer/samples.txt',
                                        tokenizer=tokenizer, dynamic_strip=cfg.DYNAMIC_STRIP)
     train_set = tf.data.Dataset.from_generator(train_generator,
                                                output_signature=(
@@ -106,7 +106,7 @@ if __name__ == '__main__':
                                                    tf.TensorSpec(shape=[cfg.MAX_LENGTH], dtype=tf.int32)
                                                )).batch(cfg.BATCH_SIZE)
     # dataset from generator: valid
-    valid_generator = TextDataStreamer(corpus='../tokenizer/samples.txt',
+    valid_generator = TextDataStreamer(corpus='../tokenizer/valid_samples.txt',
                                        tokenizer=tokenizer, dynamic_strip=cfg.DYNAMIC_STRIP)
     valid_set = tf.data.Dataset.from_generator(valid_generator,
                                                output_signature=(
@@ -119,3 +119,7 @@ if __name__ == '__main__':
 
     # run trainer
     train(model=boat, train_data=train_set, validation_data=valid_set, config=cfg)
+
+    loaded_model = keras.models.load_model(cfg.SAVED_MODEL_PATH)
+    loaded_model.summary()
+    print("\n테스트 결과:", loaded_model.evaluate(valid_set))
