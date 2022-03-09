@@ -61,8 +61,8 @@ class FactorizedOrderedEmbeddingLayer(layers.Layer):
         self.token_embedding = layers.Embedding(input_dim=vocab_size, output_dim=factorized_dim, mask_zero=True)
         self.factorized_embedding = layers.Dense(embedding_dim)
         self.segment_embedding = layers.Embedding(input_dim=2, output_dim=embedding_dim)
-        self.word_order_embedding = layers.Embedding(input_dim=math.ceil(max_length/2)+1, output_dim=embedding_dim)
-        self.char_order_embedding = layers.Embedding(input_dim=max_length+1, output_dim=embedding_dim)
+        self.word_order_embedding = layers.Embedding(input_dim=math.ceil(max_length/2)+10, output_dim=embedding_dim)
+        self.char_order_embedding = layers.Embedding(input_dim=max_length+10, output_dim=embedding_dim)
         self.batch_first = batch_first
 
     def call(self, inputs, *args, **kwargs):

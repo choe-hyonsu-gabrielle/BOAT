@@ -70,12 +70,13 @@ def get_model(config, name=None, plot=False):
 def train(model, train_data, validation_data, config):
 
     callbacks = [
-        keras.callbacks.EarlyStopping(monitor='val_acc', mode='max', verbose=1, patience=100),
-        keras.callbacks.ModelCheckpoint(config.SAVED_MODEL_PATH, monitor='val_loss', mode='min', verbose=1, save_best_only=True),
+        keras.callbacks.ModelCheckpoint(config.SAVED_MODEL_PATH, monitor='loss', mode='min', verbose=1, save_freq=1000,
+                                        save_best_only=True),
         keras.callbacks.TerminateOnNaN()
     ]
 
-    history = model.fit(train_data, validation_data=validation_data, batch_size=cfg.BATCH_SIZE, epochs=cfg.EPOCHS, callbacks=callbacks)
+    history = model.fit(train_data, validation_data=validation_data, batch_size=cfg.BATCH_SIZE, epochs=cfg.EPOCHS,
+                        callbacks=callbacks)
 
     # acc
     plt.subplot(2, 1, 1)
