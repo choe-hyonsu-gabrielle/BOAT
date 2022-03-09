@@ -4,10 +4,11 @@ from gabrielle.tokenizer import CharLevelTokenizer
 
 
 class TextDataStreamer:
-    def __init__(self, corpus, tokenizer, dynamic_strip=False, name=None):
+    def __init__(self, corpus, tokenizer, dynamic_strip=False, order_encoding=False, name=None):
         self.corpus = corpus
         self.tokenizer = tokenizer
         self.dynamic_strip = dynamic_strip
+        self.order_encoding = order_encoding
         self.name = name if name else self.__class__.__name__
         self.file = open(self.corpus, encoding='utf-8')
         self.stream = self.file.__iter__()
@@ -23,8 +24,14 @@ class TextDataStreamer:
                 tokenized = self.tokenizer.encode_for_transformer(text, add_special_tokens=True, random_mask=True)
                 x_masked_token_ids = tokenized['masked_input_ids'][0]
                 x_token_type_ids = tokenized['token_type_ids'][0]
+                if self.order_encoding:
+                    x_word_order_ids = tokenized['word_order_ids_masked'][0]
+                    x_char_order_ids = tokenized['char_order_ids_masked'][0]
+                    x_masked_inputs = (x_masked_token_ids, x_token_type_ids, x_word_order_ids, x_char_order_ids)
+                else:
+                    x_masked_inputs = (x_masked_token_ids, x_token_type_ids)
                 y_token_ids = tokenized['input_ids'][0]
-                yield (x_masked_token_ids, x_token_type_ids), y_token_ids
+                yield x_masked_inputs, y_token_ids
         except StopIteration:
             self.file.close()
             self.file = open(self.corpus, encoding='utf-8')
@@ -36,11 +43,12 @@ if __name__ == '__main__':
     tokenizer = CharLevelTokenizer().load_pretrained_tokenizer('../tokenizer/your_awesome_tokenizer.json')
     tokenizer.max_length = 30
 
-    text_generator = TextDataStreamer(corpus='../tokenizer/samples.txt', tokenizer=tokenizer, dynamic_strip=True)
+    text_generator = TextDataStreamer(corpus='../tokenizer/samples.txt', tokenizer=tokenizer, dynamic_strip=True,
+                                      order_encoding=True)
 
     data = tf.data.Dataset.from_generator(text_generator,
                                           output_signature=(
-                                              tf.TensorSpec(shape=(2, tokenizer.max_length,), dtype=tf.int32),
+                                              tf.TensorSpec(shape=(4, tokenizer.max_length,), dtype=tf.int32),
                                               tf.TensorSpec(shape=(tokenizer.max_length,), dtype=tf.int32)
                                           )).batch(5)
 
@@ -52,5 +60,6 @@ if __name__ == '__main__':
                   cnt,
                   ''.join(tokenizer.decode(x[0], strip_special_tokens=True)),
                   (len(x[0]), len(y)),
-                  ''.join(tokenizer.decode(y, strip_special_tokens=True)),)
+                  ''.join(tokenizer.decode(y, strip_special_tokens=True)),
+                  x[1])
             cnt += 1

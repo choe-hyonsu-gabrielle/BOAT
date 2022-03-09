@@ -3,22 +3,30 @@ import tensorflow.keras as keras
 import matplotlib.pyplot as plt
 from gabrielle.pretrained import TextDataStreamer
 from gabrielle.pretrained import BOATConfig
-from gabrielle.pretrained import FactorizedEmbeddingLayer, MaskedLanguageModelEmbeddingLayer
+from gabrielle.pretrained import FactorizedEmbeddingLayer, FactorizedOrderedEmbeddingLayer, MaskedLanguageModelEmbeddingLayer
 from gabrielle.pretrained import TransformerStackedEncoderLayers, TransformerPostEncoderDenseLayer
 from gabrielle.tokenizer import CharLevelTokenizer
 
 
 def get_model(config, name=None, plot=False):
-    # Input layer =  batch_size * (token_ids, token_type_ids) * max_length
-    inputs = keras.layers.Input(shape=(2, config.MAX_LENGTH,), dtype=tf.int32, name='CharLevelInputLayer')
+    # Input layer =  batch_size * (token_ids, token_type_ids, **else) * max_length
+    num_inputs_ = 4 if config.ORDER_ENCODING else 2
+    inputs = keras.layers.Input(shape=(num_inputs_, config.MAX_LENGTH,), dtype=tf.int32, name='CharLevelInputLayer')
 
     # Embedding layer
     if config.FACTORIZED_DIM:
-        embedding_layer = FactorizedEmbeddingLayer(max_length=config.MAX_LENGTH,
-                                                   vocab_size=config.VOCAB_SIZE,
-                                                   embedding_dim=config.EMBEDDING_DIM,
-                                                   factorized_dim=config.FACTORIZED_DIM,
-                                                   batch_first=True)
+        if config.ORDER_ENCODING:
+            embedding_layer = FactorizedOrderedEmbeddingLayer(max_length=config.MAX_LENGTH,
+                                                              vocab_size=config.VOCAB_SIZE,
+                                                              embedding_dim=config.EMBEDDING_DIM,
+                                                              factorized_dim=config.FACTORIZED_DIM,
+                                                              batch_first=True)
+        else:
+            embedding_layer = FactorizedEmbeddingLayer(max_length=config.MAX_LENGTH,
+                                                       vocab_size=config.VOCAB_SIZE,
+                                                       embedding_dim=config.EMBEDDING_DIM,
+                                                       factorized_dim=config.FACTORIZED_DIM,
+                                                       batch_first=True)
     else:
         embedding_layer = MaskedLanguageModelEmbeddingLayer(max_length=cfg.MAX_LENGTH,
                                                             vocab_size=config.VOCAB_SIZE,
@@ -62,7 +70,7 @@ def get_model(config, name=None, plot=False):
 def train(model, train_data, validation_data, config):
 
     callbacks = [
-        keras.callbacks.EarlyStopping(monitor='val_acc', mode='max', verbose=1, patience=2),
+        keras.callbacks.EarlyStopping(monitor='val_acc', mode='max', verbose=1, patience=100),
         keras.callbacks.ModelCheckpoint(config.SAVED_MODEL_PATH, monitor='val_loss', mode='min', verbose=1, save_best_only=True),
         keras.callbacks.TerminateOnNaN()
     ]
@@ -96,26 +104,29 @@ if __name__ == '__main__':
     cfg = BOATConfig
     cfg.VOCAB_SIZE = tokenizer.vocab_size
     cfg.MAX_LENGTH = tokenizer.max_length
+    num_inputs = 4 if cfg.ORDER_ENCODING else 2
 
     # dataset from generator: train
-    train_generator = TextDataStreamer(corpus='../tokenizer/samples.txt',
-                                       tokenizer=tokenizer, dynamic_strip=cfg.DYNAMIC_STRIP)
+    train_generator = TextDataStreamer(corpus='E:/Corpora & Language Resources/모두의 말뭉치/splits/modu-paragraphs-train.txt',
+                                       tokenizer=tokenizer,
+                                       dynamic_strip=cfg.DYNAMIC_STRIP, order_encoding=cfg.ORDER_ENCODING)
     train_set = tf.data.Dataset.from_generator(train_generator,
                                                output_signature=(
-                                                   tf.TensorSpec(shape=[2, cfg.MAX_LENGTH], dtype=tf.int32),
+                                                   tf.TensorSpec(shape=[num_inputs, cfg.MAX_LENGTH], dtype=tf.int32),
                                                    tf.TensorSpec(shape=[cfg.MAX_LENGTH], dtype=tf.int32)
                                                )).batch(cfg.BATCH_SIZE)
     # dataset from generator: valid
-    valid_generator = TextDataStreamer(corpus='../tokenizer/valid_samples.txt',
-                                       tokenizer=tokenizer, dynamic_strip=cfg.DYNAMIC_STRIP)
+    valid_generator = TextDataStreamer(corpus='E:/Corpora & Language Resources/모두의 말뭉치/splits/modu-paragraphs-dev.txt',
+                                       tokenizer=tokenizer,
+                                       dynamic_strip=cfg.DYNAMIC_STRIP, order_encoding=cfg.ORDER_ENCODING)
     valid_set = tf.data.Dataset.from_generator(valid_generator,
                                                output_signature=(
-                                                   tf.TensorSpec(shape=[2, cfg.MAX_LENGTH], dtype=tf.int32),
+                                                   tf.TensorSpec(shape=[num_inputs, cfg.MAX_LENGTH], dtype=tf.int32),
                                                    tf.TensorSpec(shape=[cfg.MAX_LENGTH], dtype=tf.int32)
                                                )).batch(cfg.BATCH_SIZE)
 
     # define model
-    boat = get_model(config=cfg, name="BOAT", plot=True)
+    boat = get_model(config=cfg, name="BOAT-FACTORIZED-CROSS-ORDER", plot=True)
 
     # run trainer
     train(model=boat, train_data=train_set, validation_data=valid_set, config=cfg)

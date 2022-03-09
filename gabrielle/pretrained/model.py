@@ -1,3 +1,4 @@
+import math
 import tensorflow as tf
 import tensorflow.keras as keras
 from tensorflow.keras import layers
@@ -43,6 +44,56 @@ class FactorizedEmbeddingLayer(layers.Layer):
         # Segment embedding
         segment_vector = self.segment_embedding(token_type_ids)
         outputs = factorized_vectors + position_vectors + segment_vector
+        return outputs, attention_mask
+
+
+class FactorizedOrderedEmbeddingLayer(layers.Layer):
+    def __init__(self, max_length, vocab_size, embedding_dim, factorized_dim=64, batch_first=False):
+        """
+        :param max_length: tokenizer.max_length
+        :param vocab_size: tokenizer.vocab_size for input_dim of Embedding
+        :param embedding_dim: final embedding output dim
+        :param factorized_dim: intermediate dim for factorized embedding parameterization
+        note that attention_mask will be computed from embedding.compute_mask(token_ids).
+        """
+        super(FactorizedOrderedEmbeddingLayer, self).__init__(name=self.__class__.__name__)
+        self.max_length = max_length
+        self.token_embedding = layers.Embedding(input_dim=vocab_size, output_dim=factorized_dim, mask_zero=True)
+        self.factorized_embedding = layers.Dense(embedding_dim)
+        self.segment_embedding = layers.Embedding(input_dim=2, output_dim=embedding_dim)
+        self.word_order_embedding = layers.Embedding(input_dim=math.ceil(max_length/2)+1, output_dim=embedding_dim)
+        self.char_order_embedding = layers.Embedding(input_dim=max_length+1, output_dim=embedding_dim)
+        self.batch_first = batch_first
+
+    def call(self, inputs, *args, **kwargs):
+        """
+        :param inputs: (token_ids OR masked_input_ids, token_type_ids, word_order_ids, char_order_ids)
+                       - no need to feed attention_mask manually.
+                       |inputs| = 2:(token_ids, token_type_ids) * batch_size * max_length
+        :return: outputs, attention_mask
+        """
+        if self.batch_first:
+            token_ids = inputs[:, 0, :]
+            token_type_ids = inputs[:, 1, :]
+            word_order_ids = inputs[:, 2, :]
+            char_order_ids = inputs[:, 3, :]
+        else:
+            token_ids = inputs[0]
+            token_type_ids = inputs[1]
+            word_order_ids = inputs[2]
+            char_order_ids = inputs[3]
+        # Factorized token embedding for token_ids
+        token_vectors = self.token_embedding(token_ids)
+        factorized_vectors = self.factorized_embedding(token_vectors)
+        # get attention_mask from embedding.compute_mask(token_ids)
+        attention_mask = self.token_embedding.compute_mask(token_ids)
+        attention_mask = attention_mask[:, tf.newaxis, tf.newaxis, :]
+        # word-order & char-order embedding
+        word_order_vectors = self.word_order_embedding(word_order_ids)
+        char_order_vectors = self.char_order_embedding(char_order_ids)
+        # Segment embedding
+        segment_vector = self.segment_embedding(token_type_ids)
+        outputs = factorized_vectors + word_order_vectors + char_order_vectors + segment_vector
         return outputs, attention_mask
 
 
