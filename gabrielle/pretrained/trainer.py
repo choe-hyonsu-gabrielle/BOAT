@@ -127,11 +127,12 @@ if __name__ == '__main__':
                                                )).batch(cfg.BATCH_SIZE)
 
     # define model
-    boat = get_model(config=cfg, name="BOAT-FACTORIZED-CROSS-ORDER", plot=True)
+    # boat = get_model(config=cfg, name="BOAT-FACTORIZED-CROSS-ORDER", plot=True)
 
     # run trainer
-    train(model=boat, train_data=train_set, validation_data=valid_set, config=cfg)
+    # train(model=boat, train_data=train_set, validation_data=valid_set, config=cfg)
 
     loaded_model = keras.models.load_model(cfg.SAVED_MODEL_PATH)
     loaded_model.summary()
+
     print("\n테스트 결과:", loaded_model.evaluate(valid_set))
