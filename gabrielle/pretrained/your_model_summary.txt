@@ -84,3 +84,42 @@ BATCH_SIZE : 16
 LEARNING_RATE : 0.0001
 EPOCHS : 1000
 SAVED_MODEL_PATH : saved_model
+
+
+Model: "BOAT-FACTORIZED-CROSS-ORDER"
+______________________________________________________________________________________________________________________________________________________
+ Layer (type)                                    Output Shape                     Param #           Connected to
+======================================================================================================================================================
+ CharLevelInputLayer (InputLayer)                [(None, 4, 512)]                 0                 []
+
+ FactorizedOrderedEmbeddingLayer (FactorizedOrde  ((None, 512, 128),              602432            ['CharLevelInputLayer[0][0]']
+ redEmbeddingLayer)                               (None, 1, 1, 512))
+
+ TransformerStackedEncoderLayers (TransformerSta  ((None, 512, 128),              99584             ['FactorizedOrderedEmbeddingLayer[0][0]',
+ ckedEncoderLayers)                               (None, 1, 1, 512))                                 'FactorizedOrderedEmbeddingLayer[0][1]']
+
+ TransformerPostEncoderDenseLayer (TransformerPo  (None, 512, 7703)               1010199           ['TransformerStackedEncoderLayers[0][0]',
+ stEncoderDenseLayer)                                                                                'TransformerStackedEncoderLayers[0][1]']
+
+======================================================================================================================================================
+Total params: 1,712,215
+Trainable params: 1,712,215
+Non-trainable params: 0
+______________________________________________________________________________________________________________________________________________________
+ORDER_ENCODING : True
+DYNAMIC_STRIP : True
+MAX_LENGTH : 512
+VOCAB_SIZE : 7703
+EMBEDDING_DIM : 128
+FACTORIZED_DIM : 64
+CROSS_LAYER_SHARING : True
+NUM_HEADS : 4
+FEEDFORWARD_DIM : 128
+NUM_LAYERS : 4
+DROPOUT_RATE : 0.1
+BATCH_SIZE : 64
+LEARNING_RATE : 1e-05
+EPOCHS : 1000
+SAVED_MODEL_PATH : saved_model_12G
+
+WARNING:absl:Function `_wrapped_model` contains input name(s) CharLevelInputLayer with unsupported characters which will be renamed to charlevelinputlayer in the SavedModel.
