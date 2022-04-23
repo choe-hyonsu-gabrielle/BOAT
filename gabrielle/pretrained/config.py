@@ -14,7 +14,8 @@ class BOATConfig:
     FEEDFORWARD_DIM = EMBEDDING_DIM
     NUM_LAYERS = 4
     DROPOUT_RATE = 0.1
-    BATCH_SIZE = 32
+    BATCH_SIZE = 64
     LEARNING_RATE = 0.00001
     EPOCHS = 1000
-    SAVED_MODEL_PATH = 'saved_model'
+    SAVE_STEP_FREQ = 1000
+    SAVED_MODEL_PATH = 'saved_model_12G'

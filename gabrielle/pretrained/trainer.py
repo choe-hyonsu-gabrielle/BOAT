@@ -70,8 +70,8 @@ def get_model(config, name=None, plot=False):
 def train(model, train_data, validation_data, config):
 
     callbacks = [
-        keras.callbacks.ModelCheckpoint(config.SAVED_MODEL_PATH, monitor='loss', mode='min', verbose=1, save_freq=1000,
-                                        save_best_only=True),
+        keras.callbacks.ModelCheckpoint(config.SAVED_MODEL_PATH, monitor='loss', mode='min', verbose=1,
+                                        save_freq=config.SAVE_STEP_FREQ, save_best_only=True),
         keras.callbacks.TerminateOnNaN()
     ]
 
@@ -108,7 +108,7 @@ if __name__ == '__main__':
     num_inputs = 4 if cfg.ORDER_ENCODING else 2
 
     # dataset from generator: train
-    train_generator = TextDataStreamer(corpus='E:/Corpora & Language Resources/모두의 말뭉치/splits/modu-paragraphs-train.txt',
+    train_generator = TextDataStreamer(corpus='D:/Corpora & Language Resources/모두의 말뭉치/splits/modu-paragraphs-train.txt',
                                        tokenizer=tokenizer,
                                        dynamic_strip=cfg.DYNAMIC_STRIP, order_encoding=cfg.ORDER_ENCODING)
     train_set = tf.data.Dataset.from_generator(train_generator,
@@ -117,7 +117,7 @@ if __name__ == '__main__':
                                                    tf.TensorSpec(shape=[cfg.MAX_LENGTH], dtype=tf.int32)
                                                )).batch(cfg.BATCH_SIZE)
     # dataset from generator: valid
-    valid_generator = TextDataStreamer(corpus='E:/Corpora & Language Resources/모두의 말뭉치/splits/modu-paragraphs-dev.txt',
+    valid_generator = TextDataStreamer(corpus='D:/Corpora & Language Resources/모두의 말뭉치/splits/modu-paragraphs-dev.txt',
                                        tokenizer=tokenizer,
                                        dynamic_strip=cfg.DYNAMIC_STRIP, order_encoding=cfg.ORDER_ENCODING)
     valid_set = tf.data.Dataset.from_generator(valid_generator,
@@ -127,10 +127,10 @@ if __name__ == '__main__':
                                                )).batch(cfg.BATCH_SIZE)
 
     # define model
-    # boat = get_model(config=cfg, name="BOAT-FACTORIZED-CROSS-ORDER", plot=True)
+    boat = get_model(config=cfg, name="BOAT-FACTORIZED-CROSS-ORDER", plot=True)
 
     # run trainer
-    # train(model=boat, train_data=train_set, validation_data=valid_set, config=cfg)
+    train(model=boat, train_data=train_set, validation_data=valid_set, config=cfg)
 
     loaded_model = keras.models.load_model(cfg.SAVED_MODEL_PATH)
     loaded_model.summary()
