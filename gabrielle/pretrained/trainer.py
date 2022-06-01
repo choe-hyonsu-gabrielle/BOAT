@@ -1,5 +1,5 @@
 import tensorflow as tf
-import tensorflow.keras as keras
+from tensorflow import keras
 import matplotlib.pyplot as plt
 from gabrielle.pretrained import TextDataStreamer
 from gabrielle.pretrained import BOATConfig
@@ -67,6 +67,31 @@ def get_model(config, name=None, plot=False):
     return model
 
 
+class StepHistory(keras.callbacks.Callback):
+    def on_train_begin(self, logs):
+        self.loss = []
+        self.acc = []
+
+    def on_batch_end(self, batch, logs):
+        if batch % 1000 == 0:
+            self.loss.append(logs.get('loss'))
+            self.acc.append(logs.get('acc'))
+
+            # acc
+            plt.subplot(2, 1, 1)
+            plt.plot(self.acc)
+            plt.title('Model accuracy')
+            plt.ylabel('Accuracy')
+
+            # loss
+            plt.subplot(2, 1, 2)
+            plt.plot(self.loss)
+            plt.xlabel('Steps (1K)')
+            plt.ylabel('Loss')
+
+            plt.savefig('BOAT_learning_curve.png')
+
+
 def train(model, train_data, validation_data, config):
 
     callbacks = [
@@ -76,25 +101,7 @@ def train(model, train_data, validation_data, config):
     ]
 
     history = model.fit(train_data, validation_data=validation_data, batch_size=cfg.BATCH_SIZE, epochs=cfg.EPOCHS,
-                        callbacks=callbacks)
-
-    # acc
-    plt.subplot(2, 1, 1)
-    plt.plot(history.history['acc'])
-    plt.plot(history.history['val_acc'])
-    plt.title('Model accuracy')
-    plt.xlabel('Epoch')
-    plt.ylabel('Accuracy')
-    plt.legend(['Train', 'Valid'], loc='upper left')
-
-    # loss
-    plt.subplot(2, 1, 2)
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.legend(['Train', 'Valid'], loc='lower left')
-    plt.savefig(model.name + '_learning_curve.png')
+                        callbacks=callbacks + [StepHistory()])
 
 
 if __name__ == '__main__':

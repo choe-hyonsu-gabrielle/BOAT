@@ -1,12 +1,11 @@
 import math
 import tensorflow as tf
-import tensorflow.keras as keras
-from tensorflow.keras import layers
+from tensorflow import keras
 from gabrielle.tokenizer import CharLevelTokenizer
 from gabrielle.pretrained import BOATConfig
 
 
-class FactorizedEmbeddingLayer(layers.Layer):
+class FactorizedEmbeddingLayer(keras.layers.Layer):
     def __init__(self, max_length, vocab_size, embedding_dim, factorized_dim=64, batch_first=False):
         """
         :param max_length: tokenizer.max_length
@@ -17,10 +16,10 @@ class FactorizedEmbeddingLayer(layers.Layer):
         """
         super(FactorizedEmbeddingLayer, self).__init__(name=self.__class__.__name__)
         self.max_length = max_length
-        self.token_embedding = layers.Embedding(input_dim=vocab_size, output_dim=factorized_dim, mask_zero=True)
-        self.factorized_embedding = layers.Dense(embedding_dim)
-        self.segment_embedding = layers.Embedding(input_dim=2, output_dim=embedding_dim)
-        self.positional_embedding = layers.Embedding(input_dim=max_length, output_dim=embedding_dim)
+        self.token_embedding = keras.layers.Embedding(input_dim=vocab_size, output_dim=factorized_dim, mask_zero=True)
+        self.factorized_embedding = keras.layers.Dense(embedding_dim)
+        self.segment_embedding = keras.layers.Embedding(input_dim=2, output_dim=embedding_dim)
+        self.positional_embedding = keras.layers.Embedding(input_dim=max_length, output_dim=embedding_dim)
         self.batch_first = batch_first
 
     def call(self, inputs, *args, **kwargs):
@@ -47,7 +46,7 @@ class FactorizedEmbeddingLayer(layers.Layer):
         return outputs, attention_mask
 
 
-class FactorizedOrderedEmbeddingLayer(layers.Layer):
+class FactorizedOrderedEmbeddingLayer(keras.layers.Layer):
     def __init__(self, max_length, vocab_size, embedding_dim, factorized_dim=64, batch_first=False):
         """
         :param max_length: tokenizer.max_length
@@ -58,11 +57,11 @@ class FactorizedOrderedEmbeddingLayer(layers.Layer):
         """
         super(FactorizedOrderedEmbeddingLayer, self).__init__(name=self.__class__.__name__)
         self.max_length = max_length
-        self.token_embedding = layers.Embedding(input_dim=vocab_size, output_dim=factorized_dim, mask_zero=True)
-        self.factorized_embedding = layers.Dense(embedding_dim)
-        self.segment_embedding = layers.Embedding(input_dim=2, output_dim=embedding_dim)
-        self.word_order_embedding = layers.Embedding(input_dim=math.ceil(max_length/2)+10, output_dim=embedding_dim)
-        self.char_order_embedding = layers.Embedding(input_dim=max_length+10, output_dim=embedding_dim)
+        self.token_embedding = keras.layers.Embedding(input_dim=vocab_size, output_dim=factorized_dim, mask_zero=True)
+        self.factorized_embedding = keras.layers.Dense(embedding_dim)
+        self.segment_embedding = keras.layers.Embedding(input_dim=2, output_dim=embedding_dim)
+        self.word_order_embedding = keras.layers.Embedding(input_dim=math.ceil(max_length/2)+10, output_dim=embedding_dim)
+        self.char_order_embedding = keras.layers.Embedding(input_dim=max_length+10, output_dim=embedding_dim)
         self.batch_first = batch_first
 
     def call(self, inputs, *args, **kwargs):
@@ -97,7 +96,7 @@ class FactorizedOrderedEmbeddingLayer(layers.Layer):
         return outputs, attention_mask
 
 
-class MaskedLanguageModelEmbeddingLayer(layers.Layer):
+class MaskedLanguageModelEmbeddingLayer(keras.layers.Layer):
     def __init__(self, max_length, vocab_size, embedding_dim, batch_first=False):
         """
         :param max_length: tokenizer.max_length
@@ -107,9 +106,9 @@ class MaskedLanguageModelEmbeddingLayer(layers.Layer):
         """
         super(MaskedLanguageModelEmbeddingLayer, self).__init__(name=self.__class__.__name__)
         self.max_length = max_length
-        self.token_embedding = layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim, mask_zero=True)
-        self.segment_embedding = layers.Embedding(input_dim=2, output_dim=embedding_dim)
-        self.positional_embedding = layers.Embedding(input_dim=max_length, output_dim=embedding_dim)
+        self.token_embedding = keras.layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim, mask_zero=True)
+        self.segment_embedding = keras.layers.Embedding(input_dim=2, output_dim=embedding_dim)
+        self.positional_embedding = keras.layers.Embedding(input_dim=max_length, output_dim=embedding_dim)
         self.batch_first = batch_first
 
     def call(self, inputs, *args, **kwargs):
@@ -135,7 +134,7 @@ class MaskedLanguageModelEmbeddingLayer(layers.Layer):
         return outputs, attention_mask
 
 
-class TransformerEncoderBlock(layers.Layer):
+class TransformerEncoderBlock(keras.layers.Layer):
     def __init__(self, embedding_dim, num_heads, feedforward_dim, dropout_rate, block_id):
         """
         :param embedding_dim: final embedding output dim
@@ -147,13 +146,13 @@ class TransformerEncoderBlock(layers.Layer):
         super(TransformerEncoderBlock, self).__init__(name=self.__class__.__name__ + str(block_id))
         self.block_id = block_id
         # Multi-head attention layer
-        self.attention = layers.MultiHeadAttention(num_heads=num_heads, key_dim=embedding_dim // num_heads)
-        self.layer_normalization1 = layers.LayerNormalization(epsilon=1e-6)
-        self.dropout1 = layers.Dropout(dropout_rate)
+        self.attention = keras.layers.MultiHeadAttention(num_heads=num_heads, key_dim=embedding_dim // num_heads)
+        self.layer_normalization1 = keras.layers.LayerNormalization(epsilon=1e-6)
+        self.dropout1 = keras.layers.Dropout(dropout_rate)
         # Feed-forward layer
-        self.feedforward = keras.Sequential([layers.Dense(feedforward_dim, activation='relu'), layers.Dense(embedding_dim)])
-        self.layer_normalization2 = layers.LayerNormalization(epsilon=1e-6)
-        self.dropout2 = layers.Dropout(dropout_rate)
+        self.feedforward = keras.Sequential([keras.layers.Dense(feedforward_dim, activation='relu'), keras.layers.Dense(embedding_dim)])
+        self.layer_normalization2 = keras.layers.LayerNormalization(epsilon=1e-6)
+        self.dropout2 = keras.layers.Dropout(dropout_rate)
 
     def call(self, inputs, *args, **kwargs):
         # |input[0]| = batch_size * max_length * embedding_dim
@@ -169,7 +168,7 @@ class TransformerEncoderBlock(layers.Layer):
         return sequence_outputs, attention_mask
 
 
-class TransformerStackedEncoderLayers(layers.Layer):
+class TransformerStackedEncoderLayers(keras.layers.Layer):
     def __init__(self, num_layers, cross_layer_sharing, embedding_dim, num_heads, feedforward_dim, dropout_rate):
         """
         :param num_layers: height or size of stacked Transformer blocks
@@ -211,7 +210,7 @@ class TransformerStackedEncoderLayers(layers.Layer):
         return _outputs
 
 
-class TransformerPostEncoderDenseLayer(layers.Layer):
+class TransformerPostEncoderDenseLayer(keras.layers.Layer):
     def __init__(self, embedding_dim, vocab_size, return_argmax=False):
         """
         :param embedding_dim: embedding dim
@@ -221,8 +220,8 @@ class TransformerPostEncoderDenseLayer(layers.Layer):
         self.embedding_dim = embedding_dim
         self.vocab_size = vocab_size
         self.classifier = keras.Sequential(
-            [layers.Dense(embedding_dim, activation='relu'),
-             layers.Dense(vocab_size, activation='softmax')]
+            [keras.layers.Dense(embedding_dim, activation='relu'),
+             keras.layers.Dense(vocab_size, activation='softmax')]
         )
         self.return_argmax = return_argmax
 
